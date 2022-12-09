@@ -19,7 +19,7 @@ from os import path
 import skvideo.io
 from sys import platform
 
-from r3m import load_r3m
+# from r3m import load_r3m
 
 # TODO
 # remove rwd_mode
@@ -372,8 +372,9 @@ class MujocoEnv(gym.Env, gym.utils.EzPickle, ObsVecDict):
 
         # Record success if solved for provided successful_steps
         for path in paths:
-            if np.sum(path['env_infos']['solved'] * 1.0) > successful_steps:
+            if np.sum(path['env_infos']['solved'][-2*successful_steps:] * 1.0) > successful_steps:
                 # sum of truth values may not work correctly if dtype=object, need to * 1.0
+                # sum of truth values might not be desirable if its solutions are spread out or earlier in trajectories.
                 num_success += 1
         success_percentage = num_success*100.0/num_paths
 
@@ -480,9 +481,9 @@ class MujocoEnv(gym.Env, gym.utils.EzPickle, ObsVecDict):
         qv = state_dict['qvel']
         act = state_dict['act']
         self.set_state(qp, qv, act)
-        if self.sim.model.nmocap>0:
-            self.sim.model.mocap_pos[:] = state_dict['mocap_pos']
-            self.sim.model.mocap_quat[:] = state_dict['mocap_quat']
+        # if self.sim.model.nmocap>0:
+        #     self.sim.model.mocap_pos[:] = state_dict['mocap_pos']
+        #     self.sim.model.mocap_quat[:] = state_dict['mocap_quat']
         if self.sim.model.nsite>0:
             self.sim.model.site_pos[:] = state_dict['site_pos']
             self.sim.model.site_quat[:] = state_dict['site_quat']
@@ -622,7 +623,7 @@ class MujocoEnv(gym.Env, gym.utils.EzPickle, ObsVecDict):
             if render =='offscreen':
                 file_name = output_dir + filename + str(ep) + ".mp4"
                 # check if the platform is OS -- make it compatible with quicktime
-                if platform == "darwin": 
+                if platform == "darwin":
                     skvideo.io.vwrite(file_name, np.asarray(frames),outputdict={"-pix_fmt": "yuv420p"})
                 else:
                     skvideo.io.vwrite(file_name, np.asarray(frames))

@@ -18,6 +18,7 @@ class ReachEnvV0(BaseV0):
         "reach": 1.0,
         "bonus": 4.0,
         "penalty": 50,
+        "act_reg":1
     }
 
     def __init__(self, model_path, obsd_model_path=None, seed=None, **kwargs):
@@ -53,6 +54,7 @@ class ReachEnvV0(BaseV0):
                 sites=self.target_reach_range.keys(),
                 **kwargs,
                 )
+        self.init_qpos[:] = self.sim.model.key_qpos[0]
 
     def get_obs_vec(self):
         self.obs_dict['t'] = np.array([self.sim.data.time])
@@ -91,14 +93,16 @@ class ReachEnvV0(BaseV0):
 
     def get_reward_dict(self, obs_dict):
         reach_dist = np.linalg.norm(obs_dict['reach_err'], axis=-1)
+        vel_dist = np.linalg.norm(obs_dict['qvel'], axis=-1)
         act_mag = np.linalg.norm(self.obs_dict['act'], axis=-1)/self.sim.model.na if self.sim.model.na !=0 else 0
         far_th = self.far_th*len(self.tip_sids) if np.squeeze(obs_dict['t'])>2*self.dt else np.inf
-        near_th = len(self.tip_sids)*.0125
+        # near_th = len(self.tip_sids)*.0125
+        near_th = len(self.tip_sids)*.050
         rwd_dict = collections.OrderedDict((
             # Optional Keys
-            ('reach',   -1.*reach_dist),
+            ('reach',   -1.*reach_dist -10.*vel_dist),
             ('bonus',   1.*(reach_dist<2*near_th) + 1.*(reach_dist<near_th)),
-            ('act_reg', -1.*act_mag),
+            ('act_reg', -100.*act_mag),
             ('penalty', -1.*(reach_dist>far_th)),
             # Must keys
             ('sparse',  -1.*reach_dist),
